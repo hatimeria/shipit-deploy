@@ -26,6 +26,7 @@ module.exports = function (gruntOrShipit) {
     .then(initRepository)
     .then(setGitConfig)
     .then(addRemote)
+    .then(cleanRepository)
     .then(fetch)
     .then(checkout)
     .then(reset)
@@ -116,6 +117,21 @@ module.exports = function (gruntOrShipit) {
       .then(function () {
         shipit.log(chalk.green('Remote updated.'));
       });
+    }
+
+    /**
+     * Clean repository from any local changes and untracked files to avoid conflicts during checkout
+     */
+
+    function cleanRepository() {
+      shipit.log('Purging local changes in the repository');
+      return shipit.local(
+        'git clean -fdx',
+        {cwd: shipit.config.workspace}
+      )
+        .then(function () {
+          shipit.log(chalk.green('Repository purged.'));
+        });
     }
 
     /**
