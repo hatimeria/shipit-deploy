@@ -32,8 +32,8 @@ module.exports = function (gruntOrShipit) {
         'if [[ -d current && ! (-L current) ]]; then ' +
         'echo \"ERR: could not make symlink\"; ' +
         'else ' +
-        'ln -nfs ' + relativeReleasePath + ' current_tmp && ' +
-        'mv -fT current_tmp current; ' +
+        // todo add isOsx
+        'ln -nfs ' + relativeReleasePath + ' current; ' +
         'fi'
       )
       .then(function (res) {
