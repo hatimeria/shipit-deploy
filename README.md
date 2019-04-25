@@ -38,6 +38,7 @@ module.exports = function (shipit) {
       repositoryUrl: 'https://github.com/user/repo.git',
       ignores: ['.git', 'node_modules'],
       keepReleases: 2,
+      targetIsOsX: false,
       deleteOnRollback: false,
       key: '/path/to/key',
       shallowClone: true
@@ -196,6 +197,11 @@ The complete release path : `path.join(shipit.releasesPath, shipit.releaseDirnam
 Attached during `deploy:init`, `rollback:init`, and `pending:log` tasks.
 
 The current symlink path : `path.join(shipit.config.deployTo, 'current')`.
+
+### shipit.targetIsOsX
+
+Defines that target server is running OS X.
+This is required to fix some command line differences.
 
 ## Workflow tasks
 
