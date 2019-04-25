@@ -27,13 +27,19 @@ module.exports = function (gruntOrShipit) {
 
       var relativeReleasePath = path.join('releases', shipit.releaseDirname);
 
+      var symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current_tmp && ' +
+        'mv -fT current_tmp current; ';
+
+      if (shipit.config.targetIsOsX) {
+        symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current';
+      }
+
       return shipit.remote(
         'cd ' + shipit.config.deployTo + ' && ' +
         'if [[ -d current && ! (-L current) ]]; then ' +
         'echo \"ERR: could not make symlink\"; ' +
         'else ' +
-        // todo add isOsx
-        'ln -nfs ' + relativeReleasePath + ' current; ' +
+        symlinkReplaceCommand +
         'fi'
       )
       .then(function (res) {
