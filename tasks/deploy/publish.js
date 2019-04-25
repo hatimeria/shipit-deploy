@@ -30,6 +30,7 @@ module.exports = function (gruntOrShipit) {
       var symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current_tmp && ' +
         'mv -fT current_tmp current; ';
 
+      // OS X has no -T flag
       if (shipit.config.targetIsOsX) {
         symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current; ';
       }
