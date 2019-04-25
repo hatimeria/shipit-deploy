@@ -31,7 +31,7 @@ module.exports = function (gruntOrShipit) {
         'mv -fT current_tmp current; ';
 
       if (shipit.config.targetIsOsX) {
-        symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current';
+        symlinkReplaceCommand = 'ln -nfs ' + relativeReleasePath + ' current; ';
       }
 
       return shipit.remote(
