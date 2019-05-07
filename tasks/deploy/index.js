@@ -1,4 +1,10 @@
-var utils = require('shipit-utils');
+import utils from 'shipit-utils'
+import init from './init'
+import fetch from './fetch'
+import update from './update'
+import publish from './publish'
+import clean from './clean'
+import finish from './finish'
 
 /**
  * Deploy task.
@@ -9,20 +15,20 @@ var utils = require('shipit-utils');
  * - deploy:finish
  */
 
-module.exports = function (gruntOrShipit) {
-  require('./init')(gruntOrShipit);
-  require('./fetch')(gruntOrShipit);
-  require('./update')(gruntOrShipit);
-  require('./publish')(gruntOrShipit);
-  require('./clean')(gruntOrShipit);
-  require('./finish')(gruntOrShipit);
+export default shipit => {
+  init(shipit)
+  fetch(shipit)
+  update(shipit)
+  publish(shipit)
+  clean(shipit)
+  finish(shipit)
 
-  utils.registerTask(gruntOrShipit, 'deploy', [
+  utils.registerTask(shipit, 'deploy', [
     'deploy:init',
     'deploy:fetch',
     'deploy:update',
     'deploy:publish',
     'deploy:clean',
-    'deploy:finish'
-  ]);
-};
+    'deploy:finish',
+  ])
+}

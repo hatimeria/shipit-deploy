@@ -1,8 +1,8 @@
-var utils = require('shipit-utils');
-var chalk = require('chalk');
-var mkdirp = require('mkdirp');
-var Promise = require('bluebird');
-var rimraf = require('rimraf');
+import path from 'path'
+import utils from 'shipit-utils'
+import chalk from 'chalk'
+import tmp from 'tmp-promise'
+import extendShipit from '../../extendShipit'
 
 /**
  * Fetch task.
@@ -10,233 +10,186 @@ var rimraf = require('rimraf');
  * - Fetch repository.
  * - Checkout commit-ish.
  */
-
-module.exports = function (gruntOrShipit) {
-  utils.registerTask(gruntOrShipit, 'deploy:fetch', task);
-
-  function task() {
-    var shipit = utils.getShipit(gruntOrShipit);
-  
-    if (!shipit.config.repositoryUrl) {
-      shipit.log('Skipping fetching as no repository url was set.');
-      return;
-    }
-
-    return createWorkspace()
-    .then(initRepository)
-    .then(setGitConfig)
-    .then(addRemote)
-    .then(cleanRepository)
-    .then(fetch)
-    .then(checkout)
-    .then(reset)
-    .then(merge)
-    .then(updateSubmodules)
-    .then(function () {
-      shipit.emit('fetched');
-    });
+const fetchTask = shipit => {
+  utils.registerTask(shipit, 'deploy:fetch', async () => {
+    extendShipit(shipit)
 
     /**
      * Create workspace.
      */
-
-    function createWorkspace() {
-      function create() {
-        shipit.log('Create workspace "%s"', shipit.config.workspace);
-        return Promise.promisify(mkdirp)(shipit.config.workspace)
-        .then(function () {
-          shipit.log(chalk.green('Workspace created.'));
-        });
+    async function createWorkspace() {
+      async function create() {
+        shipit.log('Create workspace...')
+        /* eslint-disable no-param-reassign */
+        if (shipit.config.shallowClone) {
+          const tmpDir = await tmp.dir({ mode: '0755' })
+          shipit.workspace = tmpDir.path
+        } else {
+          shipit.workspace = shipit.config.workspace
+          if (path.resolve(shipit.workspace) === process.cwd()) {
+            throw new Error('Workspace should be a temporary directory')
+          }
+        }
+        /* eslint-enable no-param-reassign */
+        shipit.log(chalk.green(`Workspace created: "${shipit.workspace}"`))
       }
 
-      if (shipit.config.shallowClone) {
-        shipit.log('Deleting existing workspace "%s"', shipit.config.workspace);
-        return Promise.promisify(rimraf)(shipit.config.workspace)
-        .then(create);
-      }
-
-      return create();
+      return create()
     }
 
     /**
      * Initialize repository.
      */
-
-    function initRepository() {
-      shipit.log('Initialize local repository in "%s"', shipit.config.workspace);
-      return shipit.local('git init', {cwd: shipit.config.workspace})
-      .then(function () {
-        shipit.log(chalk.green('Repository initialized.'));
-      });
+    async function initRepository() {
+      shipit.log('Initialize local repository in "%s"', shipit.workspace)
+      await shipit.local('git init', { cwd: shipit.workspace })
+      shipit.log(chalk.green('Repository initialized.'))
     }
 
     /**
      * Set git config.
      */
+    async function setGitConfig() {
+      if (!shipit.config.gitConfig) return
 
-    function setGitConfig() {
-      if (!shipit.config.gitConfig) {
-        return Promise.resolve();
-      }
+      shipit.log('Set custom git config options for "%s"', shipit.workspace)
 
-      shipit.log('Set custom git config options for "%s"', shipit.config.workspace);
-
-      return Promise.all(Object.keys(shipit.config.gitConfig || {}).map(function (key, gitConfig) {
-        return shipit.local(
-          'git config ' + key + ' "' + shipit.config.gitConfig[key] + '"',
-          {cwd: shipit.config.workspace}
-        );
-      }))
-      .then(function () {
-        shipit.log(chalk.green('Git config set.'));
-      });
+      await Promise.all(
+        Object.keys(shipit.config.gitConfig || {}).map(key =>
+          shipit.local(`git config ${key} "${shipit.config.gitConfig[key]}"`, {
+            cwd: shipit.workspace,
+          }),
+        ),
+      )
+      shipit.log(chalk.green('Git config set.'))
     }
 
     /**
      * Add remote.
      */
+    async function addRemote() {
+      shipit.log('List local remotes.')
 
-    function addRemote() {
-      shipit.log('List local remotes.');
-
-      // List remotes.
-      return shipit.local('git remote', {cwd: shipit.config.workspace})
-      .then(function (res) {
-        var remotes = res.stdout ? res.stdout.split(/\s/) : [];
-        var method = remotes.indexOf('shipit') !== -1 ? 'set-url' : 'add';
-
-        shipit.log('Update remote "%s" to local repository "%s"',
-          shipit.config.repositoryUrl, shipit.config.workspace);
-
-        // Update remote.
-        return shipit.local(
-          'git remote ' + method + ' shipit ' + shipit.config.repositoryUrl,
-          {cwd: shipit.config.workspace}
-        );
+      const res = await shipit.local('git remote', {
+        cwd: shipit.workspace,
       })
-      .then(function () {
-        shipit.log(chalk.green('Remote updated.'));
-      });
-    }
 
-    /**
-     * Clean repository from any local changes and untracked files to avoid conflicts during checkout
-     */
+      const remotes = res.stdout ? res.stdout.split(/\s/) : []
+      const method = remotes.indexOf('shipit') !== -1 ? 'set-url' : 'add'
 
-    function cleanRepository() {
-      shipit.log('Purging local changes in the repository');
-      return shipit.local(
-        'git clean -fdx',
-        {cwd: shipit.config.workspace}
+      shipit.log(
+        'Update remote "%s" to local repository "%s"',
+        shipit.config.repositoryUrl,
+        shipit.workspace,
       )
-        .then(function () {
-          shipit.log(chalk.green('Repository purged.'));
-        });
+
+      // Update remote.
+      await shipit.local(
+        `git remote ${method} shipit ${shipit.config.repositoryUrl}`,
+        { cwd: shipit.workspace },
+      )
+
+      shipit.log(chalk.green('Remote updated.'))
     }
 
     /**
      * Fetch repository.
      */
-
-    function fetch() {
-      var fetchCommand = 'git fetch shipit --prune';
-      var fetchDepth = shipit.config.shallowClone ? ' --depth=1' : '';
+    async function fetch() {
+      let fetchCommand = 'git fetch shipit --prune'
+      const fetchDepth = shipit.config.shallowClone ? ' --depth=1' : ''
 
       // fetch branches and tags separate to be compatible with git versions < 1.9
-      fetchCommand += fetchDepth + ' && ' + fetchCommand + ' "refs/tags/*:refs/tags/*"';
+      fetchCommand += `${fetchDepth} && ${fetchCommand} "refs/tags/*:refs/tags/*"`
 
-      shipit.log('Fetching repository "%s"', shipit.config.repositoryUrl);
+      shipit.log('Fetching repository "%s"', shipit.config.repositoryUrl)
 
-      return shipit.local(
-        fetchCommand,
-        {cwd: shipit.config.workspace}
-      )
-      .then(function () {
-        shipit.log(chalk.green('Repository fetched.'));
-      });
+      await shipit.local(fetchCommand, { cwd: shipit.workspace })
+      shipit.log(chalk.green('Repository fetched.'))
     }
 
     /**
      * Checkout commit-ish.
      */
-
-    function checkout() {
-      shipit.log('Checking out commit-ish "%s"', shipit.config.branch);
-      return shipit.local(
-        'git checkout ' + shipit.config.branch,
-        {cwd: shipit.config.workspace}
-      )
-      .then(function () {
-        shipit.log(chalk.green('Checked out.'));
-      });
+    async function checkout() {
+      shipit.log('Checking out commit-ish "%s"', shipit.config.branch)
+      await shipit.local(`git checkout ${shipit.config.branch}`, {
+        cwd: shipit.workspace,
+      })
+      shipit.log(chalk.green('Checked out.'))
     }
 
     /**
      * Hard reset of working tree.
      */
-
-    function reset() {
-      shipit.log('Resetting the working tree');
-      return shipit.local(
-        'git reset --hard HEAD',
-        {cwd: shipit.config.workspace}
-      )
-      .then(function () {
-        shipit.log(chalk.green('Reset working tree.'));
-      });
+    async function reset() {
+      shipit.log('Resetting the working tree')
+      await shipit.local('git reset --hard HEAD', {
+        cwd: shipit.workspace,
+      })
+      shipit.log(chalk.green('Reset working tree.'))
     }
 
     /**
      * Merge branch.
      */
+    async function merge() {
+      shipit.log('Testing if commit-ish is a branch.')
 
-    function merge() {
-      shipit.log('Testing if commit-ish is a branch.');
-
-      // Test if commit-ish is a branch.
-      return shipit.local(
-        'git branch --list ' + shipit.config.branch,
-        {cwd: shipit.config.workspace}
+      const res = await shipit.local(
+        `git branch --list ${shipit.config.branch}`,
+        {
+          cwd: shipit.workspace,
+        },
       )
-      .then(function (res) {
-        var isBranch = !!res.stdout;
 
-        if (!isBranch) {
-          shipit.log(chalk.green('No branch, no merge.'));
-          return;
-        }
+      const isBranch = !!res.stdout
 
-        shipit.log('Commit-ish is a branch, merging...');
+      if (!isBranch) {
+        shipit.log(chalk.green('No branch, no merge.'))
+        return
+      }
 
-        // Merge branch.
-        return shipit.local(
-          'git merge shipit/' + shipit.config.branch,
-          {cwd: shipit.config.workspace}
-        );
+      shipit.log('Commit-ish is a branch, merging...')
+
+      // Merge branch.
+      await shipit.local(`git merge shipit/${shipit.config.branch}`, {
+        cwd: shipit.workspace,
       })
-      .then(function () {
-        shipit.log(chalk.green('Branch merged.'));
-      });
+
+      shipit.log(chalk.green('Branch merged.'))
     }
 
     /**
      * update submodules
      */
+    async function updateSubmodules() {
+      if (!shipit.config.updateSubmodules) return
 
-    function updateSubmodules() {
-
-      if (!shipit.config.updateSubmodules) {
-        return Promise.resolve();
-      }
-
-      shipit.log('Updating submodules.');
-      return shipit.local(
-          'git submodule update --init --recursive',
-          {cwd: shipit.config.workspace}
-          )
-          .then(function () {
-            shipit.log(chalk.green('Submodules updated'));
-          });
+      shipit.log('Updating submodules.')
+      await shipit.local('git submodule update --init --recursive', {
+        cwd: shipit.workspace,
+      })
+      shipit.log(chalk.green('Submodules updated'))
     }
-  }
-};
+
+    await createWorkspace()
+
+    if (shipit.config.repositoryUrl) {
+      await initRepository()
+      await setGitConfig()
+      await addRemote()
+      await fetch()
+      await checkout()
+      await reset()
+      await merge()
+      await updateSubmodules()
+    } else {
+      shipit.log(chalk.yellow('Skip fetching repo. No repositoryUrl provided'))
+    }
+
+    shipit.emit('fetched')
+  })
+}
+
+export default fetchTask

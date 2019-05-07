@@ -1,51 +1,36 @@
 {
   "name": "shipit-deploy",
-  "version": "2.5.1",
-  "description": "Set of deployment tasks for Shipit based on git and rsync commands. ",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
+  "version": "4.1.4",
+  "description": "Official set of deploy tasks for Shipit.",
+  "engines": {
+    "node": ">=6"
   },
-  "files": [
-    "index.js",
-    "tasks",
-    "lib"
-  ],
-  "scripts": {
-    "test": "mocha --recursive"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/shipitjs/shipit-deploy.git"
-  },
-  "keywords": [
-    "shipit",
-    "deploy",
-    "task"
-  ],
   "author": "Greg Bergé <berge.greg@gmail.com>",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/shipitjs/shipit-deploy/issues"
+  "repository": "https://github.com/shipitjs/shipit/tree/master/packages/shipit-deploy",
+  "main": "lib/index.js",
+  "keywords": [
+    "shipit",
+    "automation",
+    "deployment",
+    "deploy",
+    "ssh"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf lib/",
+    "build": "babel --config-file ../../babel.config.js -d lib --ignore \"**/*.test.js\" src",
+    "prepublishOnly": "yarn run build"
   },
-  "homepage": "https://github.com/shipitjs/shipit-deploy",
-  "devDependencies": {
-    "chai": "^3.4.1",
-    "mocha": "^2.1.0",
-    "rewire": "^2.1.4",
-    "shipit-cli": "^1.4.1",
-    "sinon": "^1.12.2",
-    "sinon-as-promised": "^4.0.0",
-    "sinon-chai": "^2.7.0"
+  "peerDependencies": {
+    "shipit-cli": "^4.1.0"
   },
   "dependencies": {
-    "bluebird": "^3.0.6",
-    "chalk": "^1.0.0",
-    "lodash": "^4.6.1",
-    "mkdirp": "^0.5.0",
-    "moment": "^2.12.0",
+    "chalk": "^2.4.1",
+    "lodash": "^4.17.10",
+    "moment": "^2.21.0",
     "path2": "^0.1.0",
-    "rimraf": "^2.6.2",
-    "shipit-utils": "^1.1.3"
+    "rmfr": "^1.0.8",
+    "shipit-utils": "^1.1.3",
+    "tmp-promise": "^1.0.4"
   }
 }

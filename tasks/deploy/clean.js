@@ -1,31 +1,32 @@
-var utils = require('shipit-utils');
+/* eslint-disable prefer-template */
+import utils from 'shipit-utils'
+import extendShipit from '../../extendShipit'
 
 /**
  * Clean task.
  * - Remove old releases.
  */
+const cleanTask = shipit => {
+  utils.registerTask(shipit, 'deploy:clean', async () => {
+    extendShipit(shipit)
 
-module.exports = function (gruntOrShipit) {
-  utils.registerTask(gruntOrShipit, 'deploy:clean', task);
+    shipit.log(
+      'Keeping "%d" last releases, cleaning others',
+      shipit.config.keepReleases,
+    )
 
-  function task() {
-    var shipit = utils.getShipit(gruntOrShipit);
+    const command =
+      '(ls -rd ' +
+      shipit.releasesPath +
+      '/*|head -n ' +
+      shipit.config.keepReleases +
+      ';ls -d ' +
+      shipit.releasesPath +
+      '/*)|sort|uniq -u|xargs rm -rf'
+    await shipit.remote(command)
 
-    return cleanOldReleases()
-    .then(function () {
-      shipit.emit('cleaned');
-    });
+    shipit.emit('cleaned')
+  })
+}
 
-    /**
-     * Remove old releases.
-     */
-
-    function cleanOldReleases() {
-      shipit.log('Keeping "%d" last releases, cleaning others', shipit.config.keepReleases);
-      var command = '(ls -rd ' + shipit.releasesPath +
-      '/*|head -n ' + shipit.config.keepReleases + ';ls -d ' + shipit.releasesPath +
-      '/*)|sort|uniq -u|xargs rm -rf';
-      return shipit.remote(command);
-    }
-  }
-};
+export default cleanTask

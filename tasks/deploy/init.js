@@ -1,17 +1,15 @@
-var utils = require('shipit-utils');
-var init = require('../../lib/init');
-var path = require('path2/posix');
+import utils from 'shipit-utils'
+import extendShipit from '../../extendShipit'
 
 /**
  * Init task.
  * - Emit deploy event.
  */
+const initTask = shipit => {
+  utils.registerTask(shipit, 'deploy:init', () => {
+    extendShipit(shipit)
+    shipit.emit('deploy')
+  })
+}
 
-module.exports = function (gruntOrShipit) {
-  utils.registerTask(gruntOrShipit, 'deploy:init', task);
-
-  function task() {
-    var shipit = init(utils.getShipit(gruntOrShipit));
-    shipit.emit('deploy');
-  }
-};
+export default initTask

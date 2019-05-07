@@ -1,16 +1,16 @@
-var utils = require('shipit-utils');
-var init = require('../../lib/init');
+import utils from 'shipit-utils'
+import extendShipit from '../../extendShipit'
 
 /**
- * Update task.
+ * Finish task.
  * - Emit an event "deployed".
  */
 
-module.exports = function (gruntOrShipit) {
-  utils.registerTask(gruntOrShipit, 'deploy:finish', task);
+const finishTask = shipit => {
+  utils.registerTask(shipit, 'deploy:finish', () => {
+    extendShipit(shipit)
+    shipit.emit('deployed')
+  })
+}
 
-  function task() {
-    var shipit = init(utils.getShipit(gruntOrShipit));
-    shipit.emit('deployed');
-  }
-};
+export default finishTask

@@ -1,15 +1,14 @@
-var utils = require('shipit-utils');
+import utils from 'shipit-utils'
+import logTask from './log'
+import fetchTask from '../deploy/fetch'
 
 /**
  * Pending task.
- * - pending:init
+ * - deploy:fetch
  * - pending:log
  */
-
-module.exports = function (gruntOrShipit) {
-  require('./log')(gruntOrShipit);
-
-  utils.registerTask(gruntOrShipit, 'pending', [
-    'pending:log',
-  ]);
-};
+export default shipit => {
+  logTask(shipit)
+  fetchTask(shipit)
+  utils.registerTask(shipit, 'pending', ['deploy:fetch', 'pending:log'])
+}

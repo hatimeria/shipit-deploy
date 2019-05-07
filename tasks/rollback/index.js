@@ -1,4 +1,8 @@
-var utils = require('shipit-utils');
+import utils from 'shipit-utils'
+import initTask from './init'
+import fetchTask from '../deploy/fetch'
+import cleanTask from '../deploy/clean'
+import finishTask from './finish'
 
 /**
  * Rollback task.
@@ -6,17 +10,16 @@ var utils = require('shipit-utils');
  * - deploy:publish
  * - deploy:clean
  */
+export default shipit => {
+  initTask(shipit)
+  fetchTask(shipit)
+  cleanTask(shipit)
+  finishTask(shipit)
 
-module.exports = function (gruntOrShipit) {
-  require('./init')(gruntOrShipit);
-  require('../deploy/fetch')(gruntOrShipit);
-  require('../deploy/clean')(gruntOrShipit);
-  require('./finish')(gruntOrShipit);
-
-  utils.registerTask(gruntOrShipit, 'rollback', [
+  utils.registerTask(shipit, 'rollback', [
     'rollback:init',
     'deploy:publish',
     'deploy:clean',
-    'rollback:finish'
-  ]);
-};
+    'rollback:finish',
+  ])
+}

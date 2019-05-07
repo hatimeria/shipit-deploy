@@ -1,5 +1,9 @@
-module.exports = function (shipit) {
-  require('./tasks/deploy')(shipit);
-  require('./tasks/rollback')(shipit);
-  require('./tasks/pending')(shipit);
-};
+import deploy from './tasks/deploy'
+import rollback from './tasks/rollback'
+import pending from './tasks/pending'
+
+module.exports = shipit => {
+  deploy(shipit)
+  rollback(shipit)
+  pending(shipit)
+}
