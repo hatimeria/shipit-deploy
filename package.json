@@ -17,9 +17,13 @@
     "ssh"
   ],
   "scripts": {
-    "prebuild": "rm -rf lib/",
-    "build": "babel --config-file ../../babel.config.js -d lib --ignore \"**/*.test.js\" src",
-    "prepublishOnly": "yarn run build"
+    "build": "lerna run build",
+    "ci": "yarn build && yarn lint && yarn test --ci --coverage && codecov",
+    "dev": "lerna run build --parallel -- --watch",
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "lint": "eslint .",
+    "release": "lerna publish --conventional-commits && conventional-github-releaser --preset angular",
+    "test": "jest --runInBand"
   },
   "peerDependencies": {
     "shipit-cli": "^4.1.0"
