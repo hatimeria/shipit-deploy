@@ -130,6 +130,12 @@ module.exports = function (gruntOrShipit) {
         {cwd: shipit.config.workspace}
       )
         .then(function () {
+          return shipit.local(
+            'git checkout -- .',
+            {cwd: shipit.config.workspace}
+          )
+        })
+        .then(function () {
           shipit.log(chalk.green('Repository purged.'));
         });
     }
