@@ -137,6 +137,9 @@ module.exports = function (gruntOrShipit) {
         })
         .then(function () {
           shipit.log(chalk.green('Repository purged.'));
+        })
+        .catch(function (){
+          shipit.log(chalk.green('Repository purged.'));
         });
     }
 
